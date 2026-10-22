@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBER//MEMORY - Retro Anime Deck</title>
+    <style>
+        /* ==========================================
+           RESET & ESTILOS BASE (MONOCROMÁTICO)
+           ========================================== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            background-color: #050505;
+            color: #ffffff;
+            font-family: 'Courier New', Courier, monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 0);
+            background-size: 24px 24px;
+        }
+
+        /* EFECTO SCANLINE DE PANTALLA CRT */
+        body::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 100;
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+        }
+
+        /* CONTENEDOR PRINCIPAL */
+        .app-container {
+            width: 100%;
+            max-width: 680px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            z-index: 10;
+        }
+
+        /* HEADER & TÍTULO */
+        header {
+            text-align: center;
+            border-bottom: 2px solid #ffffff;
+            padding-bottom: 10px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 2rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 0px #333;
+        }
+
+        p.subtitle {
+            font-size: 0.8rem;
+            color: #888;
+            letter-spacing: 2px;
+            margin-top: 5px;
+        }
+
+        /* DASHBOARD DE ESTADÍSTICAS */
+        .stats-panel {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            background: #000;
+            border: 1px solid #444;
+            padding: 12px 20px;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #fff;
+            margin-top: 2px;
+        }
+
+        /* BOTONES STYLED */
+        .btn {
+            background-color: #000;
+            color: #fff;
+            border: 1px solid #fff;
+            padding: 10px 20px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            outline: none;
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            background-color: #fff;
+            color: #000;
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.8);
+        }
+
+        .btn:active {
+            transform: scale(0.96);
+        }
+
+        /* TABLERO DE CARTAS */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            width: 100%;
+            perspective: 1000px;
+        }
+
+        /* ESTILO DE CADA CARTA */
+        .card {
+            aspect-ratio: 3/4;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched {
+            transform: rotateY(180deg) scale(0.95);
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid #ffffff;
+            border-radius: 6px;
+            background-color: #0d0d0d;
+            padding: 8px;
+        }
+
+        /* REVERSO DE LA CARTA (CERRADA) */
+        .card-back {
+            background: linear-gradient(135deg, #111 25%, #000 25%, #000 50%, #111 50%, #111 75%, #000 75%, #000 100%);
+            background-size: 20px 20px;
+            border-color: #555;
+        }
+
+        .card-back::after {
+            content: "👁️";
+            font-size: 1.5rem;
+            filter: grayscale(100%) brightness(200%);
+            opacity: 0.4;
+        }
+
+        /* FRENTE DE LA CARTA (ABIERTA) */
+        .card-front {
+            transform: rotateY(180deg);
+            background-color: #000;
+            border-color: #fff;
+        }
+
+        .card-icon {
+            font-size: 2.2rem;
+            margin-bottom: 6px;
+            filter: grayscale(100%) contrast(200%);
+        }
+
+        .card-title {
+            font-size: 0.65rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #aaa;
+            text-align: center;
+        }
+
+        /* CANVAS DE PARTICULAS (VICTORIA) */
+        #fxCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 99;
+        }
+
+        /* MODAL DE VICTORIA */
+        .modal {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 150;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: #000;
+            border: 2px solid #fff;
+            padding: 30px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 0 25px rgba(255,255,255,0.2);
+        }
+
+        .modal h2 {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+
+        .modal p {
+            font-size: 0.9rem;
+            color: #ccc;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        /* ADAPTABILIDAD MÓVIL */
+        @media (max-width: 480px) {
+            .grid-container {
+                gap: 8px;
+            }
+            .card-icon {
+                font-size: 1.6rem;
+            }
+            .card-title {
+                font-size: 0.55rem;
+            }
+            h1 {
+                font-size: 1.4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="fxCanvas"></canvas>
+
+    <div class="app-container">
+        <header>
+            <h1>SYSTEM//MEMORY</h1>
+            <p class="subtitle">CYBERPUNK ANIME MEMORY DECK</p>
+        </header>
+
+        <div class="stats-panel">
+            <div class="stat-box">
+                <span class="stat-label">Movimientos</span>
+                <span id="moves" class="stat-value">0</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-label">Tiempo</span>
+                <span id="timer" class="stat-value">00:00</span>
+            </div>
+            <button id="restartBtn" class="btn">Reiniciar</button>
+        </div>
+
+        <div class="grid-container" id="grid"></div>
+    </div>
+
+    <!-- MODAL VICTORIA -->
+    <div class="modal" id="winModal">
+        <div class="modal-content">
+            <h2>MISION COMPLETADA</h2>
+            <p id="winStats">Memoria sincronizada con éxito.</p>
+            <button class="btn" id="modalRestartBtn">Jugar de Nuevo</button>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================
+           1. SISTEMA DE AUDIO (WEB AUDIO API - SINTETIZADO)
+           ========================================== */
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playFlip() {
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.08);
+                
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playMatch() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(880, now + 0.1);
+
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(now + 0.25);
+            }
+
+            playMismatch() {
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.linearRampToValueAtTime(110, now + 0.15);
+
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(now + 0.15);
+            }
+
+            playWin() {
+                this.init();
+                const notes = [261.63, 329.63, 392.00, 523.25, 659.25];
+                notes.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    const now = this.ctx.currentTime + (i * 0.08);
+
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(freq, now);
+
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                });
+            }
+        }
+
+        const audio = new SoundFX();
+
+        /* ==========================================
+           2. DATOS DE CARTAS (RETRO ANIME CYBERPUNK)
+           ========================================== */
+        const CARDS_DATA = [
+            { icon: '🤖', title: 'ANDROID' },
+            { icon: '⚔️', title: 'KATANA' },
+            { icon: '👁️', title: 'CYBER EYE' },
+            { icon: '💾', title: 'DATA CHIP' },
+            { icon: '🗼', title: 'TOKYO' },
+            { icon: '💊', title: 'PILL' },
+            { icon: '🎧', title: 'NET RUN' },
+            { icon: '⚡', title: 'POWER' }
+        ];
+
+        /* ==========================================
+           3. ESTADO DEL JUEGO
+           ========================================== */
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let moves = 0;
+        let timerInterval = null;
+        let secondsElapsed = 0;
+        let gameStarted = false;
+        let isLockBoard = false;
+
+        /* DOM ELEMENTS */
+        const gridEl = document.getElementById('grid');
+        const movesEl = document.getElementById('moves');
+        const timerEl = document.getElementById('timer');
+        const restartBtn = document.getElementById('restartBtn');
+        const winModal = document.getElementById('winModal');
+        const winStatsEl = document.getElementById('winStats');
+        const modalRestartBtn = document.getElementById('modalRestartBtn');
+
+        /* ==========================================
+           4. LÓGICA DEL MEMORAMA
+           ========================================== */
+        function initGame() {
+            // Reset de variables
+            cards = [];
+            flippedCards = [];
+            matchedPairs = 0;
+            moves = 0;
+            secondsElapsed = 0;
+            gameStarted = false;
+            isLockBoard = false;
+
+            movesEl.textContent = '0';
+            timerEl.textContent = '00:00';
+            clearInterval(timerInterval);
+
+            winModal.classList.remove('show');
+
+            // Crear el mazo duplicado (8 pares = 16 cartas)
+            const deck = [...CARDS_DATA, ...CARDS_DATA];
+            
+            // Mezclar (Barajar)
+            deck.sort(() => Math.random() - 0.5);
+
+            // Renderizar Grid
+            gridEl.innerHTML = '';
+            deck.forEach((data, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.classList.add('card');
+                cardEl.dataset.index = index;
+                cardEl.dataset.title = data.title;
+
+                cardEl.innerHTML = `
+                    <div class="card-face card-back"></div>
+                    <div class="card-face card-front">
+                        <div class="card-icon">${data.icon}</div>
+                        <div class="card-title">${data.title}</div>
+                    </div>
+                `;
+
+                cardEl.addEventListener('click', () => onCardClick(cardEl));
+                gridEl.appendChild(cardEl);
+            });
+        }
+
+        function startTimer() {
+            if (gameStarted) return;
+            gameStarted = true;
+            timerInterval = setInterval(() => {
+                secondsElapsed++;
+                const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+                const secs = String(secondsElapsed % 60).padStart(2, '0');
+                timerEl.textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function onCardClick(cardEl) {
+            if (isLockBoard) return;
+            if (cardEl.classList.contains('flipped') || cardEl.classList.contains('matched')) return;
+
+            startTimer();
+            audio.playFlip();
+
+            cardEl.classList.add('flipped');
+            flippedCards.push(cardEl);
+
+            if (flippedCards.length === 2) {
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            isLockBoard = true;
+            moves++;
+            movesEl.textContent = moves;
+
+            const [card1, card2] = flippedCards;
+            const isMatch = card1.dataset.title === card2.dataset.title;
+
+            if (isMatch) {
+                setTimeout(() => {
+                    audio.playMatch();
+                    card1.classList.add('matched');
+                    card2.classList.add('matched');
+                    matchedPairs++;
+                    flippedCards = [];
+                    isLockBoard = false;
+
+                    if (matchedPairs === CARDS_DATA.length) {
+                        endGame();
+                    }
+                }, 400);
+            } else {
+                setTimeout(() => {
+                    audio.playMismatch();
+                    card1.classList.remove('flipped');
+                    card2.classList.remove('flipped');
+                    flippedCards = [];
+                    isLockBoard = false;
+                }, 900);
+            }
+        }
+
+        function endGame() {
+            clearInterval(timerInterval);
+            audio.playWin();
+            launchConfetti();
+
+            const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+            const secs = String(secondsElapsed % 60).padStart(2, '0');
+
+            winStatsEl.innerHTML = `
+                Movimientos totales: <strong>${moves}</strong><br>
+                Tiempo final: <strong>${mins}:${secs}</strong>
+            `;
+
+            setTimeout(() => {
+                winModal.classList.add('show');
+            }, 600);
+        }
+
+        /* ==========================================
+           5. SISTEMA DE PARTÍCULAS / CELEBRACIÓN
+           ========================================== */
+        const canvas = document.getElementById('fxCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function launchConfetti() {
+            particles = [];
+            for (let i = 0; i < 90; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height / 2,
+                    vx: (Math.random() - 0.5) * 14,
+                    vy: (Math.random() - 0.5) * 14,
+                    size: Math.random() * 6 + 2,
+                    life: 1,
+                    decay: Math.random() * 0.02 + 0.015
+                });
+            }
+            requestAnimationFrame(updateParticles);
+        }
+
+        function updateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            particles.forEach((p, index) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= p.decay;
+
+                ctx.fillStyle = `rgba(255, 255, 255, ${p.life})`;
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+
+                if (p.life <= 0) {
+                    particles.splice(index, 1);
+                }
+            });
+
+            if (particles.length > 0) {
+                requestAnimationFrame(updateParticles);
+            }
+        }
+
+        /* LISTENERS */
+        restartBtn.addEventListener('click', () => {
+            audio.playFlip();
+            initGame();
+        });
+
+        modalRestartBtn.addEventListener('click', () => {
+            audio.playFlip();
+            initGame();
+        });
+
+        /* INICIAR JUEGO AL CREGAR */
+        window.onload = initGame;
+    </script>
+</body>
+</html>
